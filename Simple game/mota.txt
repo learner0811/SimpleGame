@@ -1,0 +1,17 @@
+check xem da win chua
+check xem co trung vs dest
+
+neu gap wall ok ko update
+neu gap khoang trong update
+neu gap box. 
+	Box bi collision thi ko update
+	Box gap khoang trong update ca box lan character
+	Box gap dest thi update ca box lan character va dem so diem dest thoa man
+	Box ra ngoai dest thi tru di
+bug ngu?i dính ph?i dest -- solution la thay the m?t bi?u tuong khác
+
+@-batman
+#-wall
+.-dest
+*-blueBox
+$-box
