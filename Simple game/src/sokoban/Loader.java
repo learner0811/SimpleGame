@@ -42,7 +42,8 @@ public class Loader {
                     for (int i = 0; i < size; i++)
                         temp[i] = maps.get(i).toCharArray();
                     
-                    level.setMaps(temp);
+                    level.setOrigin(temp);                    
+                    level.process();
                     list.add(level);
                     
                     //erase
@@ -54,7 +55,7 @@ public class Loader {
                 }       
             }
         } catch (Exception ex) {
-            System.out.println("File is not exist");
+            System.out.println("Fail in loader");
         }        
         return list;
     }

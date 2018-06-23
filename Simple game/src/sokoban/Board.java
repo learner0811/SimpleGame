@@ -6,7 +6,10 @@
 package sokoban;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -27,17 +30,19 @@ public class Board extends JPanel implements ActionListener, KeyListener{
     private ArrayList<Level> list;
     private Level level;
     private String levelName = "";
+    private BatMan Batman;
+    private int starNum;
+    private int currentPoint;
     private char[][] curMap;
-    private int offset = 50;
-    private int delay = 140;       
-    private BatMan BatmanLoc;
+    private int offset = 50;        
     private boolean winningFlag;    
     
     
     public Board(){
-        init();
+        init();       
+        expected = new Dimension(400,600);
         this.setFocusable(true);
-        this.addKeyListener(this);
+        this.addKeyListener(this);        
         this.setSize(expected);
         this.setPreferredSize(expected);
         this.setMaximumSize(expected);
@@ -46,14 +51,15 @@ public class Board extends JPanel implements ActionListener, KeyListener{
     }
     
     ///////////////////////////////////////SUPPORT FUNCTION/////////////////////////////
-    public void init(){
-        expected = new Dimension(500,500);
-        list = Loader.mapLoader();
-        
+    public void init(){        
+        list = Loader.mapLoader();        
+        winningFlag = false;        
         
         boolean invalid = true;
         do{     
             levelName = JOptionPane.showInputDialog(this, "Type the level in number");
+            if (levelName == null)
+                System.exit(0);
             int levelNumber = 0;
             try{
                 levelNumber = Integer.parseInt(levelName);
@@ -63,25 +69,38 @@ public class Board extends JPanel implements ActionListener, KeyListener{
             if (levelName.matches("\\d+"))
                 invalid = false;            
             if (levelNumber > 89){
-                invalid = true;
+                invalid = true;            
             }
         } while (invalid);
         
-        level = list.get(Integer.parseInt(levelName) - 1);
+        level = list.get(Integer.parseInt(levelName) - 1);        
         curMap = level.getMaps(); 
-        BatmanLoc = new BatMan();
-        BatmanLoc.point = level.getBatmanLoc();
-        winningFlag = false;        
-        
+        Batman = new BatMan();
+        Batman.point = level.getBatmanLoc();
+        starNum = level.getStarNum();
+        currentPoint = level.getCurrentPoint();                
     }
     
-    private void doDrawing(Graphics g){
+    public void reset(){
+        this.setFocusable(true);
+        winningFlag = false;
+        level.setMaps();
+        level.process();
+        curMap = level.getMaps();               
+        Batman = new BatMan();
+        Batman.point = level.getBatmanLoc();
+        starNum = level.getStarNum();        
+        currentPoint = level.getCurrentPoint();        
+        repaint();        
+    }
+    
+    private void doDrawing(Graphics g){        
         for (int i = 0; i < curMap.length; i++) {
             for (int j = 0; j < curMap[0].length; j++) {
                 char a = curMap[i][j];
                 switch (a) {
                     case '@':
-                        g.drawImage(getBatman(), BatmanLoc.point.y * offset, BatmanLoc.point.x * offset, offset, offset, this);
+                        g.drawImage(getBatman(), Batman.point.y * offset, Batman.point.x * offset, offset, offset, this);
                         break;
                     case '#':
                         g.drawImage(getWall(), j * offset, i * offset, offset, offset, this);
@@ -100,13 +119,24 @@ public class Board extends JPanel implements ActionListener, KeyListener{
                 }
             }
         }
+        if (winningFlag)
+            drawWin(g);
     }
     
+    
+    private void drawWin(Graphics g){
+        Font a = new Font("Raavi", Font.CENTER_BASELINE, 40);
+        FontMetrics fm = getFontMetrics(a);
+        g.setColor(new Color(77, 9, 117));
+        g.setFont(a);
+        String msg = "State Completed!";
+        g.drawString(msg, 280 - fm.stringWidth(msg)/2, 400);   
+    }
     ////////////////////////////////////GAME LOGIC FUNCTION////////////////////////////////////
     private String checkCollision(int key){        
         if (key == KeyEvent.VK_LEFT){
-            int x = BatmanLoc.point.x;
-            int y = BatmanLoc.point.y;
+            int x = Batman.point.x;
+            int y = Batman.point.y;
             switch(curMap[x][y-1]){
                 case ' ':
                     return "space";
@@ -133,8 +163,8 @@ public class Board extends JPanel implements ActionListener, KeyListener{
             }               
         }
         else if (key == KeyEvent.VK_RIGHT){
-            int x = BatmanLoc.point.x;
-            int y = BatmanLoc.point.y;
+            int x = Batman.point.x;
+            int y = Batman.point.y;
             switch(curMap[x][y+1]){
                 case ' ':
                     return "space";
@@ -161,8 +191,8 @@ public class Board extends JPanel implements ActionListener, KeyListener{
             }               
         }
         else if (key == KeyEvent.VK_UP){
-            int x = BatmanLoc.point.x;
-            int y = BatmanLoc.point.y;
+            int x = Batman.point.x;
+            int y = Batman.point.y;
             switch(curMap[x-1][y]){
                 case ' ':
                     return "space";
@@ -189,8 +219,8 @@ public class Board extends JPanel implements ActionListener, KeyListener{
             }               
         }
         else if (key == KeyEvent.VK_DOWN){
-            int x = BatmanLoc.point.x;
-            int y = BatmanLoc.point.y;
+            int x = Batman.point.x;
+            int y = Batman.point.y;
             switch(curMap[x+1][y]){
                 case ' ':
                     return "space";
@@ -222,129 +252,133 @@ public class Board extends JPanel implements ActionListener, KeyListener{
     private void move(String message, int key){
         if (message.equals("Blocked"))
             return;
-        int x = BatmanLoc.point.x;
-        int y = BatmanLoc.point.y;
+        int x = Batman.point.x;
+        int y = Batman.point.y;
         
         //left
         if (key == KeyEvent.VK_LEFT){            
             if (message.equals("space")){
                 curMap[x][y-1] = '@';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x,y-1);
+                Batman.standIn = false;
+                Batman.point.setLocation(x,y-1);
             }
             else if (message.equals("Hit dest")){
                 curMap[x][y-1] = '%';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x,y-1);  
+                Batman.standIn = true;
+                Batman.point.setLocation(x,y-1);  
             }
             else if (message.equals("Hit box and space")){
                 curMap[x][y-1] = '@';
                 curMap[x][y-2] = '$';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x,y-1);
+                Batman.standIn = false;
+                Batman.point.setLocation(x,y-1);
             }
             else if (message.equals("Hit box and dest")){
                 curMap[x][y-1] = '@';
                 curMap[x][y-2] = '*';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x,y-1);
+                Batman.standIn = false;
+                Batman.point.setLocation(x,y-1);
+                currentPoint++;
             }
             else if (message.equals("Hit blue box and space")){
                 curMap[x][y-1] = '%';
                 curMap[x][y-2] = '$';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x,y-1);
+                Batman.standIn = true;
+                Batman.point.setLocation(x,y-1);
+                currentPoint--;
             }
             else if (message.equals("Hit blue box and dest")){
                 curMap[x][y-1] = '%';
                 curMap[x][y-2] = '*';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x,y-1);
+                Batman.standIn = true;
+                Batman.point.setLocation(x,y-1);                
             }
         }
         //right
         else if (key == KeyEvent.VK_RIGHT){            
             if (message.equals("space")){
                 curMap[x][y+1] = '@';      
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x,y+1);
+                Batman.standIn = false;
+                Batman.point.setLocation(x,y+1);
             }
             else if (message.equals("Hit dest")){
                 curMap[x][y+1] = '%';  
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x,y+1);  
+                Batman.standIn = true;
+                Batman.point.setLocation(x,y+1);                  
             }
             else if (message.equals("Hit box and space")){
                 curMap[x][y+1] = '@';
                 curMap[x][y+2] = '$';  
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x,y+1);
+                Batman.standIn = false;
+                Batman.point.setLocation(x,y+1);
             }
             else if (message.equals("Hit box and dest")){
                 curMap[x][y+1] = '@';
                 curMap[x][y+2] = '*';  
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x,y+1);
+                Batman.standIn = false;
+                Batman.point.setLocation(x,y+1);
+                currentPoint++;
             }
             else if (message.equals("Hit blue box and space")){
                 curMap[x][y+1] = '%';
                 curMap[x][y+2] = '$';  
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x,y+1);
+                Batman.standIn = true;
+                Batman.point.setLocation(x,y+1);
+                currentPoint--;
             }
             else if (message.equals("Hit blue box and dest")){
                 curMap[x][y+1] = '%';
                 curMap[x][y+2] = '*';       
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x,y+1);
+                Batman.standIn = true;
+                Batman.point.setLocation(x,y+1);                
             }            
         }
         
@@ -352,61 +386,63 @@ public class Board extends JPanel implements ActionListener, KeyListener{
         else if (key == KeyEvent.VK_UP){            
             if (message.equals("space")){
                 curMap[x-1][y] = '@';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x-1,y);
+                Batman.standIn = false;
+                Batman.point.setLocation(x-1,y);
             }
             else if (message.equals("Hit dest")){
                 curMap[x-1][y] = '%';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x-1,y);  
+                Batman.standIn = true;
+                Batman.point.setLocation(x-1,y);  
             }
             else if (message.equals("Hit box and space")){
                 curMap[x-1][y] = '@';
                 curMap[x-2][y] = '$';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x-1,y);
+                Batman.standIn = false;
+                Batman.point.setLocation(x-1,y);
             }
             else if (message.equals("Hit box and dest")){
                 curMap[x-1][y] = '@';
                 curMap[x-2][y] = '*';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';                
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x-1,y);
+                Batman.standIn = false;
+                Batman.point.setLocation(x-1,y);
+                currentPoint++;
             }
             else if (message.equals("Hit blue box and space")){
                 curMap[x-1][y] = '%';
                 curMap[x-2][y] = '$';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x-1,y);
+                Batman.standIn = true;
+                Batman.point.setLocation(x-1,y);
+                currentPoint--;
             }
             else if (message.equals("Hit blue box and dest")){
                 curMap[x-1][y] = '%';
                 curMap[x-2][y] = '*';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x-1,y);
+                Batman.standIn = true;
+                Batman.point.setLocation(x-1,y);
             }
         }
         
@@ -414,80 +450,91 @@ public class Board extends JPanel implements ActionListener, KeyListener{
         else if (key == KeyEvent.VK_DOWN){            
             if (message.equals("space")){
                 curMap[x+1][y] = '@';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x+1,y);
+                Batman.standIn = false;
+                Batman.point.setLocation(x+1,y);
             }
             else if (message.equals("Hit dest")){
                 curMap[x+1][y] = '%';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x+1,y);  
+                Batman.standIn = true;
+                Batman.point.setLocation(x+1,y);  
             }
             else if (message.equals("Hit box and space")){
                 curMap[x+1][y] = '@';
                 curMap[x+2][y] = '$';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x+1,y);
+                Batman.standIn = false;
+                Batman.point.setLocation(x+1,y);
             }
             else if (message.equals("Hit box and dest")){
                 curMap[x+1][y] = '@';
                 curMap[x+2][y] = '*';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';                
-                BatmanLoc.standIn = false;
-                BatmanLoc.point.setLocation(x+1,y);
+                Batman.standIn = false;
+                Batman.point.setLocation(x+1,y);
+                currentPoint++;
             }
             else if (message.equals("Hit blue box and space")){
                 curMap[x+1][y] = '%';
                 curMap[x+2][y] = '$';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x+1,y);
+                Batman.standIn = true;
+                Batman.point.setLocation(x+1,y);
+                currentPoint--;
             }
             else if (message.equals("Hit blue box and dest")){
                 curMap[x+1][y] = '%';
                 curMap[x+2][y] = '*';
-                if (!BatmanLoc.standIn)
+                if (!Batman.standIn)
                     curMap[x][y] = ' ';
                 else
                     curMap[x][y] = '.';
-                BatmanLoc.standIn = true;
-                BatmanLoc.point.setLocation(x+1,y);
+                Batman.standIn = true;
+                Batman.point.setLocation(x+1,y);
             }
         }
         
+        /*test
         for (int i = 0; i < curMap.length; i++){
             for (int j = 0; j < curMap[0].length; j++)
                 System.out.print(curMap[i][j]);
             System.out.println();
-        }
+        }*/
     }
     
     private void checkWinning(){
+        if (currentPoint == starNum)
+            winningFlag = true;      
+            
         
     }
     ////////////////////////////////////Override///////////////////////////////////////////////
     @Override
-    public void paintComponent(Graphics g){
-        super.paintComponent(g);
-        g.translate(15, 50);
+    public void paintComponent(Graphics gg){
+        super.paintComponent(gg);
+        Graphics2D g = (Graphics2D) gg;
+        
+        if (curMap.length > 9)
+            g.scale(0.5, 0.45);
+        g.translate(70, 50);
         doDrawing(g);
+        g.dispose();
     }
 
     @Override
@@ -499,11 +546,12 @@ public class Board extends JPanel implements ActionListener, KeyListener{
     public void keyPressed(KeyEvent ke) {
         int key = ke.getKeyCode();
         //System.out.println(key);
-        String message = checkCollision(key);
-        System.out.println(message);
-        move(message,key);        
-        checkWinning();
-        repaint();
+        if (!winningFlag) {
+            String message = checkCollision(key);
+            move(message, key);
+            checkWinning();
+            repaint();
+        }
     }
 
     @Override
