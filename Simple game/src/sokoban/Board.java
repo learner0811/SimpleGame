@@ -52,37 +52,45 @@ public class Board extends JPanel implements ActionListener, KeyListener{
     
     ///////////////////////////////////////SUPPORT FUNCTION/////////////////////////////
     public void init(){        
-        list = Loader.mapLoader();        
-        winningFlag = false;        
+        list = Loader.mapLoader();                      
+        ChooserLevel();
+    }
+    
+    public void ChooserLevel(){
+        winningFlag = false;  
+        int levelNum = 0;
+        boolean valid = false;
         
-        boolean invalid = true;
-        do{     
-            levelName = JOptionPane.showInputDialog(this, "Type the level in number");
-            if (levelName == null)
-                System.exit(0);
-            int levelNumber = 0;
-            try{
-                levelNumber = Integer.parseInt(levelName);
-            } catch (NumberFormatException ex){
-                continue;
-            }
-            if (levelName.matches("\\d+"))
-                invalid = false;            
-            if (levelNumber > 89){
-                invalid = true;            
-            }
-        } while (invalid);
+        while (!valid){
+            levelNum = chooseLevelPane();
+            if (levelNum != -1)
+                valid = true;            
+        }               
         
-        level = list.get(Integer.parseInt(levelName) - 1);        
+        level = list.get(levelNum);        
         curMap = level.getMaps(); 
         Batman = new BatMan();
         Batman.point = level.getBatmanLoc();
         starNum = level.getStarNum();
-        currentPoint = level.getCurrentPoint();                
+        currentPoint = level.getCurrentPoint();
     }
     
-    public void reset(){
-        this.setFocusable(true);
+    private int chooseLevelPane(){
+        levelName = JOptionPane.showInputDialog(this, "Type the level in number in range of 1 to 88");
+        if (levelName == null)
+            System.exit(0);
+        int levelNum = 0;
+        try{
+            levelNum = Integer.parseInt(levelName);
+        } catch (NumberFormatException ex){
+            return -1;
+        }
+        if (levelNum > 88 || levelNum <= 0)
+            return -1;
+        return levelNum;
+    }
+    
+    public void reset(){        
         winningFlag = false;
         level.setMaps();
         level.process();
@@ -94,7 +102,10 @@ public class Board extends JPanel implements ActionListener, KeyListener{
         repaint();        
     }
     
-    private void doDrawing(Graphics g){        
+    private void doDrawing(Graphics g){                
+        g.setColor(Color.red);
+        g.setFont(new Font("Latha", Font.PLAIN, 30));
+        g.drawString("Level " + levelName, -40, -10);
         for (int i = 0; i < curMap.length; i++) {
             for (int j = 0; j < curMap[0].length; j++) {
                 char a = curMap[i][j];
