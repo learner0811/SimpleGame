@@ -52,6 +52,8 @@ public class Level {
     }     
 
     public char[][] getMaps() {
+        setMaps();
+        process();
         return maps;
     }
     

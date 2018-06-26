@@ -92,8 +92,8 @@ public class Board extends JPanel implements ActionListener, KeyListener{
     
     public void reset(){        
         winningFlag = false;
-        level.setMaps();
-        level.process();
+        /*level.setMaps();
+        level.process();*/
         curMap = level.getMaps();               
         Batman = new BatMan();
         Batman.point = level.getBatmanLoc();

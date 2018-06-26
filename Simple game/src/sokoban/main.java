@@ -55,7 +55,8 @@ public class main extends JFrame {
         chooseLevel.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent ae) {
-                
+                b.ChooserLevel();
+                b.repaint();
             }
         });
         menu.add(newgame);
